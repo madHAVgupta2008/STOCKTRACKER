@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CashewTrack — Inventory & Sales</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f0e0b;--surface:#1a1814;--surface2:#232018;--surface3:#2d2a22;
+    --border:#3a3628;--accent:#e8b84b;--accent2:#f5d07a;
+    --accent-dim:rgba(232,184,75,0.12);--accent-dim2:rgba(232,184,75,0.06);
+    --text:#f0ead8;--text2:#a09880;--text3:#5a5445;
+    --danger:#e05c4a;--danger-dim:rgba(224,92,74,0.12);
+    --success:#5ab87a;--success-dim:rgba(90,184,122,0.12);
+    --warn:#e8993a;--warn-dim:rgba(232,153,58,0.12);
+    --radius:10px;--radius-lg:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+  .logo{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
+  .logo-icon{font-size:22px;margin-bottom:6px;display:block;}
+  .logo h1{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;line-height:1.1;}
+  .logo p{font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-top:2px;}
+  .nav{padding:12px 10px;flex:1;}
+  .nav-section{margin-bottom:20px;}
+  .nav-label{font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;font-family:'DM Mono',monospace;padding:0 10px;margin-bottom:6px;}
+  .nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:transparent;color:var(--text2);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;transition:all .15s;text-align:left;}
+  .nav-btn:hover{background:var(--surface2);color:var(--text);}
+  .nav-btn.active{background:var(--accent-dim);color:var(--accent);font-weight:500;}
+  .nav-btn .icon{font-size:16px;width:20px;text-align:center;}
+  .main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .topbar h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text);}
+  .date-badge{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:20px;}
+  .content{padding:24px 28px;flex:1;}
+  .page{display:none;}.page.active{display:block;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+  .card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:16px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;position:relative;overflow:hidden;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);opacity:.4;}
+  .stat-card.added::before{background:var(--success);}
+  .stat-card.sold::before{background:var(--danger);}
+  .stat-card.low::before{background:var(--warn);}
+  .stat-label{font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:8px;}
+  .stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--text);line-height:1;}
+  .stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+  .stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .stock-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;transition:border-color .2s;}
+  .stock-item:hover{border-color:var(--accent);}
+  .stock-item.low{border-color:var(--warn);background:var(--warn-dim);}
+  .stock-item.empty{border-color:var(--danger);background:var(--danger-dim);}
+  .stock-grade{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--accent);margin-bottom:6px;}
+  .stock-qty{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);line-height:1;}
+  .stock-unit{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+  .low-badge{display:inline-block;font-size:9px;color:var(--warn);background:var(--warn-dim);border:1px solid var(--warn);padding:2px 6px;border-radius:20px;margin-top:6px;font-family:'DM Mono',monospace;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-group label{font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;}
+  .form-group input,.form-group select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);}
+  .form-group select option{background:var(--surface2);}
+  .form-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{padding:10px 20px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;transition:all .15s;letter-spacing:.3px;}
+  .btn-primary{background:var(--accent);color:#0f0e0b;}
+  .btn-primary:hover{background:var(--accent2);}
+  .btn-secondary{background:var(--surface3);color:var(--text2);border:1px solid var(--border);}
+  .btn-secondary:hover{color:var(--text);border-color:var(--accent);}
+  .btn-danger{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger);}
+  .btn-danger:hover{background:var(--danger);color:#fff;}
+  .btn-success{background:var(--success-dim);color:var(--success);border:1px solid var(--success);}
+  .btn-sm{padding:6px 12px;font-size:11px;}
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  th{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text2);font-size:13px;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--surface2);color:var(--text);}
+  .mono{font-family:'DM Mono',monospace;}
+  .grade-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(232,184,75,0.2);padding:2px 8px;border-radius:20px;}
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+  .filters input,.filters select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;}
+  .filters input:focus,.filters select:focus{border-color:var(--accent);}
+  .filter-label{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .section-gap{margin-bottom:20px;}
+  .alert{padding:12px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+  .alert-warn{background:var(--warn-dim);border:1px solid var(--warn);color:var(--warn);}
+  .alert-danger{background:var(--danger-dim);border:1px solid var(--danger);color:var(--danger);}
+  .alert-success{background:var(--success-dim);border:1px solid var(--success);color:var(--success);}
+  .empty{text-align:center;padding:40px 20px;color:var(--text3);}
+  .empty .empty-icon{font-size:36px;margin-bottom:10px;}
+  .empty p{font-size:13px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:20px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:300;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+  .toast.show{display:block;animation:slideUp .2s ease;}
+  .toast.success{border-color:var(--success);color:var(--success);}
+  .toast.error{border-color:var(--danger);color:var(--danger);}
+  @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;}
+  .login-screen.show{display:flex;}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px;width:90%;max-width:360px;}
+  .login-logo{text-align:center;margin-bottom:28px;}
+  .login-logo span{font-size:32px;}
+  .login-logo h1{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent);}
+  .login-logo p{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1.5px;margin-top:2px;}
+  .export-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;}
+  .hamburger{display:none;background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:90;}
+  .action-btns{display:flex;gap:6px;}
+  @media(max-width:720px){
+    .sidebar{transform:translateX(-100%);transition:transform .2s;}
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-overlay.open{display:block;}
+    .main{margin-left:0;}
+    .hamburger{display:block;}
+    .two-col{grid-template-columns:1fr;}
+    .stats-grid{grid-template-columns:1fr 1fr;}
+    .content{padding:16px;}
+    .topbar{padding:12px 16px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen show" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><span>🥜</span><h1>CashewTrack</h1><p>INVENTORY & SALES</p></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="admin" value="admin">
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••" value="admin123">
+    </div>
+    <div id="loginError" style="display:none" class="alert alert-danger">Invalid credentials</div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Sign In</button>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:14px;font-family:'DM Mono',monospace">Default: admin / admin123</p>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="app" id="appShell" style="display:none">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <span class="logo-icon">🥜</span>
+      <h1>CashewTrack</h1>
+      <p>Inventory & Sales</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <button class="nav-btn active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Operations</div>
+        <button class="nav-btn" onclick="showPage('stock',this)"><span class="icon">📦</span>Add Stock</button>
+        <button class="nav-btn" onclick="showPage('sales',this)"><span class="icon">🛒</span>Record Sale</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Records</div>
+        <button class="nav-btn" onclick="showPage('inventory',this)"><span class="icon">📋</span>Inventory Log</button>
+        <button class="nav-btn" onclick="showPage('saleslog',this)"><span class="icon">🧾</span>Sales Log</button>
+        <button class="nav-btn" onclick="showPage('reports',this)"><span class="icon">📈</span>Reports</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Settings</div>
+        <button class="nav-btn" onclick="showPage('settings',this)"><span class="icon">⚙️</span>Settings</button>
+        <button class="nav-btn" onclick="doLogout()"><span class="icon">🚪</span>Logout</button>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <h2 id="pageTitle">Dashboard</h2>
+      </div>
+      <div class="date-badge" id="todayDate"></div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="two-col section-gap">
+          <div class="card">
+            <div class="card-title">📦 Current Stock Levels</div>
+            <div class="stock-grid" id="stockGrid"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚠️ Low Stock Alerts</div>
+            <div id="lowStockAlerts"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🕐 Recent Activity</div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Type</th><th>Grade</th><th>Party</th><th>Qty (BKT)</th></tr></thead>
+            <tbody id="recentBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD STOCK -->
+      <div class="page" id="page-stock">
+        <div class="card">
+          <div class="card-title">➕ Add Stock Entry</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Date</label><input type="date" id="s_date"></div>
+            <div class="form-group">
+              <label>Seller Name</label>
+              <input type="text" id="s_seller" placeholder="e.g. Ramesh Traders" list="sellersList">
+              <datalist id="sellersList"></datalist>
+            </div>
+            <div class="form-group"><label>Cashew Grade</label><select id="s_grade"><option value="">Select Grade</option></select></div>
+            <div class="form-group"><label>Quantity (BKT)</label><input type="number" id="s_qty" placeholder="0" min="1" step="1"></div>
+            <div class="form-group"><label>Notes (optional)</label><input type="text" id="s_notes" placeholder="Optional notes"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="addStock()">Add Stock</button>
+            <button class="btn btn-secondary" onclick="clearStockForm()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECORD SALE -->
+      <div class="page" id="page-sales">
+        <div class="card">
+          <div class="card-title">🛒 Record Sale</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Date</label><input type="date" id="sl_date"></div>
+            <div class="form-group">
+              <label>Buyer Name</label>
+              <input type="text" id="sl_buyer" placeholder="e.g. Kumar Retail" list="buyersList">
+              <datalist id="buyersList"></datalist>
+            </div>
+            <div class="form-group"><label>Cashew Grade</label><select id="sl_grade" onchange="updateAvailStock()"><option value="">Select Grade</option></select></div>
+            <div class="form-group"><label>Available Stock</label><input type="text" id="sl_available" readonly placeholder="Select grade first" style="color:var(--accent);font-family:'DM Mono',monospace"></div>
+            <div class="form-group"><label>Quantity (BKT)</label><input type="number" id="sl_qty" placeholder="0" min="1" step="1"></div>
+            <div class="form-group"><label>Notes (optional)</label><input type="text" id="sl_notes" placeholder="Optional notes"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="addSale()">Record Sale</button>
+            <button class="btn btn-secondary" onclick="clearSaleForm()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVENTORY LOG -->
+      <div class="page" id="page-inventory">
+        <div class="card">
+          <div class="card-title">📋 Inventory Purchase Log</div>
+          <div class="filters">
+            <span class="filter-label">Filter:</span>
+            <input type="date" id="inv_from" onchange="loadInventory()">
+            <span class="filter-label">to</span>
+            <input type="date" id="inv_to" onchange="loadInventory()">
+            <select id="inv_grade" onchange="loadInventory()"><option value="">All Grades</option></select>
+            <input type="text" id="inv_search" placeholder="Search seller..." oninput="loadInventory()">
+            <button class="btn btn-secondary btn-sm" onclick="clearInvFilters()">Clear</button>
+          </div>
+          <div class="export-bar">
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV('inventory')">⬇ CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Seller</th><th>Grade</th><th>Qty (BKT)</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody id="invBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALES LOG -->
+      <div class="page" id="page-saleslog">
+        <div class="card">
+          <div class="card-title">🧾 Sales Log</div>
+          <div class="filters">
+            <span class="filter-label">Filter:</span>
+            <input type="date" id="sal_from" onchange="loadSales()">
+            <span class="filter-label">to</span>
+            <input type="date" id="sal_to" onchange="loadSales()">
+            <select id="sal_grade" onchange="loadSales()"><option value="">All Grades</option></select>
+            <input type="text" id="sal_search" placeholder="Search buyer..." oninput="loadSales()">
+            <button class="btn btn-secondary btn-sm" onclick="clearSalFilters()">Clear</button>
+          </div>
+          <div class="export-bar">
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV('sales')">⬇ CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Buyer</th><th>Grade</th><th>Qty (BKT)</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody id="salBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="page" id="page-reports">
+        <div class="card section-gap">
+          <div class="card-title">📈 Stock Movement Report</div>
+          <div class="filters" style="margin-bottom:16px">
+            <span class="filter-label">From:</span><input type="date" id="rep_from" onchange="loadReport()">
+            <span class="filter-label">To:</span><input type="date" id="rep_to" onchange="loadReport()">
+            <button class="btn btn-secondary btn-sm" onclick="setRepToday()">Today</button>
+            <button class="btn btn-secondary btn-sm" onclick="setRepWeek()">This Week</button>
+            <button class="btn btn-secondary btn-sm" onclick="setRepMonth()">This Month</button>
+          </div>
+          <div id="reportContent"></div>
+        </div>
+        <div class="card"><div class="card-title">📊 Summary</div><div id="reportSummary"></div></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="two-col section-gap">
+          <div class="card">
+            <div class="card-title">⚙️ Cashew Grades</div>
+            <div id="gradeList" style="margin-bottom:14px"></div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="newGrade" placeholder="e.g. W180" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;flex:1">
+              <button class="btn btn-primary" onclick="addGrade()">Add</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔔 Low Stock Threshold</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Alert when stock falls below this quantity (BKT)</p>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="number" id="lowThresh" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;outline:none;width:100px" min="0">
+              <button class="btn btn-primary" onclick="saveThreshold()">Save</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔐 Change Password</div>
+          <div class="form-grid" style="max-width:400px">
+            <div class="form-group"><label>New Password</label><input type="password" id="newPass" placeholder="New password"></div>
+            <div class="form-group"><label>Confirm Password</label><input type="password" id="confPass" placeholder="Confirm"></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" onclick="changePassword()">Update Password</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- EDIT INVENTORY MODAL -->
+<div class="modal-overlay" id="editInvModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Stock Entry</div>
+    <input type="hidden" id="edit_inv_id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><label>Date</label><input type="date" id="edit_inv_date"></div>
+      <div class="form-group"><label>Seller Name</label><input type="text" id="edit_inv_seller" list="editSellersList"><datalist id="editSellersList"></datalist></div>
+      <div class="form-group"><label>Cashew Grade</label><select id="edit_inv_grade"></select></div>
+      <div class="form-group"><label>Quantity (BKT)</label><input type="number" id="edit_inv_qty" min="1" step="1"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notes</label><input type="text" id="edit_inv_notes"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveEditInv()">Save Changes</button>
+      <button class="btn btn-secondary" onclick="closeModal('editInvModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SALE MODAL -->
+<div class="modal-overlay" id="editSalModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Sale Entry</div>
+    <input type="hidden" id="edit_sal_id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><label>Date</label><input type="date" id="edit_sal_date"></div>
+      <div class="form-group"><label>Buyer Name</label><input type="text" id="edit_sal_buyer" list="editBuyersList"><datalist id="editBuyersList"></datalist></div>
+      <div class="form-group"><label>Cashew Grade</label><select id="edit_sal_grade" onchange="updateEditSalStock()"></select></div>
+      <div class="form-group"><label>Available Stock</label><input type="text" id="edit_sal_available" readonly style="color:var(--accent);font-family:'DM Mono',monospace"></div>
+      <div class="form-group"><label>Quantity (BKT)</label><input type="number" id="edit_sal_qty" min="1" step="1"></div>
+      <div class="form-group"><label>Notes</label><input type="text" id="edit_sal_notes"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveEditSal()">Save Changes</button>
+      <button class="btn btn-secondary" onclick="closeModal('editSalModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────
+let grades = [];
+
+// ── HELPERS ────────────────────────────────
+const $  = id => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0,10);
+const fmt = d => { if(!d) return ''; const [y,m,day]=d.slice(0,10).split('-'); return `${day}/${m}/${y}`; };
+
+function toast(msg, type='success') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+async function api(url, opts={}) {
+  const res = await fetch(url, {
+    headers: {'Content-Type':'application/json'},
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  return res.json();
+}
+
+// ── AUTH ───────────────────────────────────
+async function doLogin() {
+  const r = await api('/api/login', {method:'POST', body:{username:$('loginUser').value, password:$('loginPass').value}});
+  if (r.ok) {
+    $('loginScreen').classList.remove('show');
+    $('appShell').style.display = 'flex';
+    $('loginError').style.display = 'none';
+    init();
+  } else {
+    $('loginError').style.display = 'flex';
+  }
+}
+$('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogout() {
+  await api('/api/logout', {method:'POST'});
+  $('loginScreen').classList.add('show');
+  $('appShell').style.display = 'none';
+}
+
+async function changePassword() {
+  const np = $('newPass').value, cp = $('confPass').value;
+  if (!np) return toast('Enter a new password','error');
+  if (np !== cp) return toast('Passwords do not match','error');
+  const r = await api('/api/change-password', {method:'POST', body:{password:np}});
+  if (r.ok) { $('newPass').value=''; $('confPass').value=''; toast('Password updated!','success'); }
+  else toast(r.error||'Error','error');
+}
+
+// ── INIT ───────────────────────────────────
+async function init() {
+  $('todayDate').textContent = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  $('s_date').value = today();
+  $('sl_date').value = today();
+  await loadGrades();
+  await loadDashboard();
+  await loadSellersBuyers();
+}
+
+async function loadGrades() {
+  grades = await api('/api/grades');
+  const opts = grades.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  const allOpt = '<option value="">All Grades</option>';
+  const selOpt = '<option value="">Select Grade</option>';
+  ['s_grade','sl_grade','edit_inv_grade','edit_sal_grade'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    const isFilter = false;
+    el.innerHTML = (id.includes('edit_')||id==='s_grade'||id==='sl_grade' ? selOpt : allOpt) + opts;
+  });
+  ['inv_grade','sal_grade'].forEach(id => {
+    const el = $(id);
+    if (el) el.innerHTML = allOpt + opts;
+  });
+  // settings grade list
+  renderGradeList();
+}
+
+async function loadSellersBuyers() {
+  const sellers = await api('/api/sellers');
+  const buyers  = await api('/api/buyers');
+  $('sellersList').innerHTML = sellers.map(s=>`<option value="${s.name}">`).join('');
+  $('buyersList').innerHTML  = buyers.map(b=>`<option value="${b.name}">`).join('');
+  $('editSellersList').innerHTML = sellers.map(s=>`<option value="${s.name}">`).join('');
+  $('editBuyersList').innerHTML  = buyers.map(b=>`<option value="${b.name}">`).join('');
+}
+
+// ── PAGE NAVIGATION ────────────────────────
+const pageTitles = {dashboard:'Dashboard',stock:'Add Stock',sales:'Record Sale',inventory:'Inventory Log',saleslog:'Sales Log',reports:'Reports',settings:'Settings'};
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  $('pageTitle').textContent = pageTitles[name]||name;
+  closeSidebar();
+  if(name==='dashboard') loadDashboard();
+  if(name==='inventory') loadInventory();
+  if(name==='saleslog')  loadSales();
+  if(name==='reports')   loadReport();
+  if(name==='settings')  loadSettings();
+  if(name==='sales')     updateAvailStock();
+}
+
+function toggleSidebar() { $('sidebar').classList.toggle('open'); $('sidebarOverlay').classList.toggle('open'); }
+function closeSidebar()   { $('sidebar').classList.remove('open'); $('sidebarOverlay').classList.remove('open'); }
+
+// ── DASHBOARD ──────────────────────────────
+async function loadDashboard() {
+  const d = await api('/api/dashboard');
+  const { stock, threshold, today_added, today_sold, recent } = d;
+
+  const totalStock = Object.values(stock).reduce((s,v)=>s+(v>0?v:0),0);
+  const lowCount   = Object.values(stock).filter(v=>v>0&&v<=threshold).length;
+
+  $('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Stock</div><div class="stat-value">${totalStock}</div><div class="stat-sub">BKT across all grades</div></div>
+    <div class="stat-card added"><div class="stat-label">Added Today</div><div class="stat-value">${today_added}</div><div class="stat-sub">BKT received</div></div>
+    <div class="stat-card sold"><div class="stat-label">Sold Today</div><div class="stat-value">${today_sold}</div><div class="stat-sub">BKT dispatched</div></div>
+    <div class="stat-card low"><div class="stat-label">Low Stock</div><div class="stat-value">${lowCount}</div><div class="stat-sub">grades below ${threshold} BKT</div></div>
+  `;
+
+  $('stockGrid').innerHTML = grades.length ? grades.map(g=>{
+    const qty = stock[g.name]||0;
+    const cls = qty<=0?'empty':qty<=threshold?'low':'';
+    return `<div class="stock-item ${cls}">
+      <div class="stock-grade">${g.name}</div>
+      <div class="stock-qty">${Math.max(0,qty)}</div>
+      <div class="stock-unit">BKT</div>
+      ${qty>0&&qty<=threshold?`<div class="low-badge">⚠ LOW</div>`:''}
+      ${qty<=0?`<div class="low-badge" style="color:var(--danger);background:var(--danger-dim);border-color:var(--danger)">OUT</div>`:''}
+    </div>`;
+  }).join('') : '<p style="color:var(--text3)">No grades configured.</p>';
+
+  const lowGrades  = grades.filter(g=>(stock[g.name]||0)>0&&(stock[g.name]||0)<=threshold);
+  const outGrades  = grades.filter(g=>(stock[g.name]||0)<=0);
+  let alerts = '';
+  outGrades.forEach(g=>alerts+=`<div class="alert alert-danger">🚨 <strong>${g.name}</strong> is OUT OF STOCK</div>`);
+  lowGrades.forEach(g=>alerts+=`<div class="alert alert-warn">⚠️ <strong>${g.name}</strong> — only ${stock[g.name]} BKT remaining</div>`);
+  $('lowStockAlerts').innerHTML = alerts || '<div class="empty"><div class="empty-icon">✅</div><p>All stock levels healthy</p></div>';
+
+  $('recentBody').innerHTML = recent.length ? recent.map(r=>`
+    <tr>
+      <td class="mono">${fmt(r.date)}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:20px;${r.type==='IN'?'background:var(--success-dim);color:var(--success);border:1px solid var(--success)':'background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger)'}">${r.type}</span></td>
+      <td><span class="grade-tag">${r.grade}</span></td>
+      <td>${r.party}</td>
+      <td class="mono">${r.qty}</td>
+    </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No activity yet</td></tr>';
+}
+
+// ── ADD STOCK ──────────────────────────────
+async function addStock() {
+  const date    = $('s_date').value;
+  const seller  = $('s_seller').value.trim();
+  const grade_id= $('s_grade').value;
+  const qty     = parseInt($('s_qty').value);
+  const notes   = $('s_notes').value.trim();
+  if (!date||!seller||!grade_id||!qty||qty<=0) return toast('Please fill all required fields','error');
+  const r = await api('/api/inventory', {method:'POST', body:{date,seller,grade_id,qty,notes}});
+  if (r.ok) { toast(`✅ Stock added successfully`,'success'); clearStockForm(); loadSellersBuyers(); }
+  else toast(r.error||'Error adding stock','error');
+}
+
+function clearStockForm() {
+  $('s_seller').value=''; $('s_grade').value=''; $('s_qty').value=''; $('s_notes').value=''; $('s_date').value=today();
+}
+
+// ── RECORD SALE ────────────────────────────
+async function updateAvailStock() {
+  const gid = $('sl_grade').value;
+  if (!gid) { $('sl_available').value=''; return; }
+  const r = await api(`/api/grade-stock/${gid}`);
+  $('sl_available').value = r.available + ' BKT';
+}
+
+async function addSale() {
+  const date    = $('sl_date').value;
+  const buyer   = $('sl_buyer').value.trim();
+  const grade_id= $('sl_grade').value;
+  const qty     = parseInt($('sl_qty').value);
+  const notes   = $('sl_notes').value.trim();
+  if (!date||!buyer||!grade_id||!qty||qty<=0) return toast('Please fill all required fields','error');
+  const r = await api('/api/sales', {method:'POST', body:{date,buyer,grade_id,qty,notes}});
+  if (r.ok) { toast(`✅ Sale recorded successfully`,'success'); clearSaleForm(); loadSellersBuyers(); }
+  else toast(r.error||'Error recording sale','error');
+}
+
+function clearSaleForm() {
+  $('sl_buyer').value=''; $('sl_grade').value=''; $('sl_qty').value=''; $('sl_notes').value='';
+  $('sl_date').value=today(); $('sl_available').value='';
+}
+
+// ── INVENTORY LOG ──────────────────────────
+async function loadInventory() {
+  const params = new URLSearchParams({
+    from:   $('inv_from').value,
+    to:     $('inv_to').value,
+    grade_id: $('inv_grade').value,
+    search: $('inv_search').value
+  });
+  const rows = await api('/api/inventory?' + params);
+  $('invBody').innerHTML = rows.length ? rows.map(r=>`
+    <tr>
+      <td class="mono">${fmt(r.date)}</td>
+      <td>${r.seller}</td>
+      <td><span class="grade-tag">${r.grade}</span></td>
+      <td class="mono">${r.qty}</td>
+      <td style="color:var(--text3)">${r.notes||'—'}</td>
+      <td class="action-btns">
+        <button class="btn btn-secondary btn-sm" onclick="openEditInv(${r.id})">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInv(${r.id})">✕ Del</button>
+      </td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:28px">No records found</td></tr>';
+}
+
+function clearInvFilters() {
+  ['inv_from','inv_to','inv_search'].forEach(id=>$(id).value='');
+  $('inv_grade').value=''; loadInventory();
+}
+
+async function deleteInv(id) {
+  if (!confirm('Delete this stock entry?')) return;
+  const r = await api(`/api/inventory/${id}`, {method:'DELETE'});
+  if (r.ok) { toast('Entry deleted'); loadInventory(); loadDashboard(); }
+  else toast(r.error||'Error','error');
+}
+
+function openEditInv(id) {
+  // find row from current table data by re-fetching just for this id (or use cached)
+  fetch('/api/inventory').then(r=>r.json()).then(rows=>{
+    const rec = rows.find(r=>r.id===id);
+    if (!rec) return;
+    $('edit_inv_id').value   = id;
+    $('edit_inv_date').value = rec.date;
+    $('edit_inv_seller').value = rec.seller;
+    $('edit_inv_qty').value  = rec.qty;
+    $('edit_inv_notes').value= rec.notes||'';
+    $('edit_inv_grade').innerHTML = grades.map(g=>`<option value="${g.id}"${g.id===rec.grade_id?' selected':''}>${g.name}</option>`).join('');
+    $('editInvModal').classList.add('open');
+  });
+}
+
+async function saveEditInv() {
+  const id       = $('edit_inv_id').value;
+  const date     = $('edit_inv_date').value;
+  const seller   = $('edit_inv_seller').value.trim();
+  const grade_id = $('edit_inv_grade').value;
+  const qty      = parseInt($('edit_inv_qty').value);
+  const notes    = $('edit_inv_notes').value.trim();
+  if (!date||!seller||!grade_id||!qty||qty<=0) return toast('Fill all required fields','error');
+  const r = await api(`/api/inventory/${id}`, {method:'PUT', body:{date,seller,grade_id,qty,notes}});
+  if (r.ok) { closeModal('editInvModal'); toast('✅ Stock entry updated','success'); loadInventory(); loadDashboard(); loadSellersBuyers(); }
+  else toast(r.error||'Error','error');
+}
+
+// ── SALES LOG ──────────────────────────────
+async function loadSales() {
+  const params = new URLSearchParams({
+    from:   $('sal_from').value,
+    to:     $('sal_to').value,
+    grade_id: $('sal_grade').value,
+    search: $('sal_search').value
+  });
+  const rows = await api('/api/sales?' + params);
+  $('salBody').innerHTML = rows.length ? rows.map(r=>`
+    <tr>
+      <td class="mono">${fmt(r.date)}</td>
+      <td>${r.buyer}</td>
+      <td><span class="grade-tag">${r.grade}</span></td>
+      <td class="mono">${r.qty}</td>
+      <td style="color:var(--text3)">${r.notes||'—'}</td>
+      <td class="action-btns">
+        <button class="btn btn-secondary btn-sm" onclick="openEditSal(${r.id})">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSale(${r.id})">✕ Del</button>
+      </td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:28px">No records found</td></tr>';
+}
+
+function clearSalFilters() {
+  ['sal_from','sal_to','sal_search'].forEach(id=>$(id).value='');
+  $('sal_grade').value=''; loadSales();
+}
+
+async function deleteSale(id) {
+  if (!confirm('Delete this sale entry?')) return;
+  const r = await api(`/api/sales/${id}`, {method:'DELETE'});
+  if (r.ok) { toast('Entry deleted'); loadSales(); loadDashboard(); }
+  else toast(r.error||'Error','error');
+}
+
+function openEditSal(id) {
+  fetch('/api/sales').then(r=>r.json()).then(rows=>{
+    const rec = rows.find(r=>r.id===id);
+    if (!rec) return;
+    $('edit_sal_id').value    = id;
+    $('edit_sal_date').value  = rec.date;
+    $('edit_sal_buyer').value = rec.buyer;
+    $('edit_sal_qty').value   = rec.qty;
+    $('edit_sal_notes').value = rec.notes||'';
+    $('edit_sal_grade').innerHTML = grades.map(g=>`<option value="${g.id}"${g.id===rec.grade_id?' selected':''}>${g.name}</option>`).join('');
+    $('editSalModal').classList.add('open');
+    updateEditSalStock();
+  });
+}
+
+async function updateEditSalStock() {
+  const gid = $('edit_sal_grade').value;
+  const eid = $('edit_sal_id').value;
+  if (!gid) { $('edit_sal_available').value=''; return; }
+  const r = await api(`/api/grade-stock/${gid}?exclude_sale=${eid}`);
+  $('edit_sal_available').value = r.available + ' BKT';
+}
+
+async function saveEditSal() {
+  const id       = $('edit_sal_id').value;
+  const date     = $('edit_sal_date').value;
+  const buyer    = $('edit_sal_buyer').value.trim();
+  const grade_id = $('edit_sal_grade').value;
+  const qty      = parseInt($('edit_sal_qty').value);
+  const notes    = $('edit_sal_notes').value.trim();
+  if (!date||!buyer||!grade_id||!qty||qty<=0) return toast('Fill all required fields','error');
+  const r = await api(`/api/sales/${id}`, {method:'PUT', body:{date,buyer,grade_id,qty,notes}});
+  if (r.ok) { closeModal('editSalModal'); toast('✅ Sale entry updated','success'); loadSales(); loadDashboard(); loadSellersBuyers(); }
+  else toast(r.error||'Error','error');
+}
+
+// ── REPORTS ────────────────────────────────
+function setRepToday()  { const t=today(); $('rep_from').value=t; $('rep_to').value=t; loadReport(); }
+function setRepWeek()   { const d=new Date(),day=d.getDay()||7,mon=new Date(d); mon.setDate(d.getDate()-day+1); $('rep_from').value=mon.toISOString().slice(0,10); $('rep_to').value=today(); loadReport(); }
+function setRepMonth()  { const d=new Date(); $('rep_from').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; $('rep_to').value=today(); loadReport(); }
+
+async function loadReport() {
+  const params = new URLSearchParams({ from:$('rep_from').value, to:$('rep_to').value });
+  const rows = await api('/api/report?' + params);
+
+  if (!rows.length) {
+    $('reportContent').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>No movement in selected period</p></div>';
+    $('reportSummary').innerHTML = '';
+    return;
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+    <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px">Grade</span>
+    <span style="font-size:10px;color:var(--success);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;text-align:right">Added</span>
+    <span style="font-size:10px;color:var(--danger);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;text-align:right">Sold</span>
+    <span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;text-align:right">Balance</span>
+  </div>`;
+  rows.forEach(r=>{
+    html+=`<div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;padding:11px 0;border-bottom:1px solid var(--border);align-items:center">
+      <span class="grade-tag">${r.grade}</span>
+      <span style="text-align:right;font-family:'Syne',sans-serif;font-weight:700;color:var(--success);font-size:15px">+${r.added}</span>
+      <span style="text-align:right;font-family:'Syne',sans-serif;font-weight:700;color:var(--danger);font-size:15px">-${r.sold}</span>
+      <span style="text-align:right;font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);font-size:15px">${r.balance}</span>
+    </div>`;
+  });
+  $('reportContent').innerHTML = html;
+
+  const totalAdded = rows.reduce((s,r)=>s+r.added,0);
+  const totalSold  = rows.reduce((s,r)=>s+r.sold,0);
+  $('reportSummary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:4px">
+      <div style="text-align:center;padding:16px;background:var(--success-dim);border:1px solid var(--success);border-radius:var(--radius)">
+        <div style="font-size:10px;color:var(--success);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Total Added</div>
+        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--success)">${totalAdded}</div>
+        <div style="font-size:11px;color:var(--text3)">BKT received</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--radius)">
+        <div style="font-size:10px;color:var(--danger);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Total Sold</div>
+        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--danger)">${totalSold}</div>
+        <div style="font-size:11px;color:var(--text3)">BKT dispatched</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--accent-dim2);border:1px solid var(--border);border-radius:var(--radius)">
+        <div style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Net Movement</div>
+        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--accent)">${totalAdded-totalSold}</div>
+        <div style="font-size:11px;color:var(--text3)">BKT net</div>
+      </div>
+    </div>`;
+}
+
+// ── SETTINGS ───────────────────────────────
+async function loadSettings() {
+  const cfg = await api('/api/settings');
+  $('lowThresh').value = cfg.low_threshold || 10;
+  renderGradeList();
+}
+
+function renderGradeList() {
+  $('gradeList').innerHTML = grades.map(g=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-family:'DM Mono',monospace;color:var(--accent);font-size:13px">${g.name}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeGrade(${g.id},'${g.name}')">Remove</button>
+    </div>`).join('') || '<p style="color:var(--text3);font-size:13px">No grades yet</p>';
+}
+
+async function addGrade() {
+  const val = $('newGrade').value.trim().toUpperCase();
+  if (!val) return toast('Enter a grade name','error');
+  const r = await api('/api/grades', {method:'POST', body:{name:val}});
+  if (r.ok) { $('newGrade').value=''; await loadGrades(); toast(`Grade ${val} added`,'success'); }
+  else toast(r.error||'Error','error');
+}
+
+async function removeGrade(id, name) {
+  if (!confirm(`Remove grade ${name}?`)) return;
+  const r = await api(`/api/grades/${id}`, {method:'DELETE'});
+  if (r.ok) { await loadGrades(); toast(`Grade ${name} removed`,'success'); }
+  else toast(r.error||'Error','error');
+}
+
+async function saveThreshold() {
+  const v = parseInt($('lowThresh').value);
+  if (isNaN(v)||v<0) return toast('Enter a valid threshold','error');
+  await api('/api/settings', {method:'POST', body:{low_threshold:v}});
+  toast('Threshold saved','success');
+}
+
+// ── MODALS ─────────────────────────────────
+function closeModal(id) { $(id).classList.remove('open'); }
+document.addEventListener('click', e => { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
+
+// ── EXPORT ─────────────────────────────────
+function exportCSV(type) { window.location.href = `/api/export/${type}`; }
+
+// ── AUTO LOGIN CHECK ───────────────────────
+(async () => {
+  const r = await api('/api/me');
+  if (r.ok) {
+    $('loginScreen').classList.remove('show');
+    $('appShell').style.display = 'flex';
+    init();
+  }
+})();
+</script>
+</body>
+</html>
